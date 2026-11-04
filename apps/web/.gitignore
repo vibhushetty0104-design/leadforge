@@ -1,0 +1,8 @@
+# App-specific ignores; secrets and common tooling are covered by the root .gitignore.
+/.next/
+/out/
+/coverage
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,20 @@
+{
+  "name": "leadforge",
+  "private": true,
+  "description": "Prospect intelligence and website auditing platform (monorepo root).",
+  "license": "MIT",
+  "workspaces": [
+    "apps/web",
+    "packages/shared"
+  ],
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @leadforge/web",
+    "build": "npm run build -w @leadforge/web",
+    "lint": "npm run lint -w @leadforge/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "generate:api": "npm run generate -w @leadforge/shared"
+  }
+}

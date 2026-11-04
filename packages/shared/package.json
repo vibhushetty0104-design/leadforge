@@ -1,0 +1,19 @@
+{
+  "name": "@leadforge/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Typed API contract shared with the web app, generated from the FastAPI OpenAPI schema.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "openapi-typescript openapi.json --output src/api.gen.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.8.0",
+    "typescript": "^5"
+  }
+}

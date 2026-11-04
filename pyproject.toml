@@ -1,0 +1,37 @@
+# Workspace-level tooling configuration for the Python packages.
+# Each package (packages/core, services/api, services/worker) has its own
+# pyproject.toml with its dependencies; this file only configures shared tools.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["apps", "node_modules", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "S", "SIM", "RUF", "ASYNC", "PT", "C4"]
+ignore = [
+  "S101",  # assert is idiomatic in pytest
+  "B008",  # FastAPI dependency injection uses calls in defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106", "S311"]
+"database/migrations/**" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["leadforge_core", "leadforge_api", "leadforge_worker"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+warn_unused_ignores = true
+exclude = ["database/migrations/versions/"]
+
+[[tool.mypy.overrides]]
+module = ["pgserver.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+filterwarnings = ["error::DeprecationWarning:leadforge_.*"]

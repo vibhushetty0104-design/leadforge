@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "leadforge-worker"
+version = "0.1.0"
+description = "LEADFORGE background job worker."
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["leadforge-core"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "ruff>=0.8", "mypy>=1.13"]
+
+[project.scripts]
+leadforge-worker = "leadforge_worker.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_worker"]

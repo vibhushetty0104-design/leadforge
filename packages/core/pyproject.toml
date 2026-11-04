@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "leadforge-core"
+version = "0.1.0"
+description = "Shared domain models, database access, URL safety and job queue for LEADFORGE services."
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+  "sqlalchemy>=2.0.36,<2.2",
+  "psycopg[binary]>=3.2,<4",
+  "pydantic>=2.9,<3",
+  "pydantic-settings>=2.6,<3",
+  "alembic>=1.14,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "ruff>=0.8", "mypy>=1.13"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_core"]

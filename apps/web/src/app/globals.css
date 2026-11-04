@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/*
+ * LEADFORGE design tokens. Dark-first: deep navy surfaces, restrained violet /
+ * blue / teal accents. Components reference the semantic tokens only.
+ */
+:root {
+  --background: oklch(0.155 0.022 265);
+  --surface: oklch(0.185 0.024 265);
+  --surface-raised: oklch(0.215 0.026 265);
+  --foreground: oklch(0.96 0.008 265);
+  --muted: oklch(0.235 0.022 265);
+  --muted-foreground: oklch(0.7 0.02 265);
+  --subtle-foreground: oklch(0.56 0.02 265);
+  --border: oklch(0.29 0.024 265);
+  --border-strong: oklch(0.36 0.028 265);
+  --input: oklch(0.3 0.024 265);
+  --ring: oklch(0.66 0.17 290);
+
+  --primary: oklch(0.6 0.19 290); /* violet */
+  --primary-hover: oklch(0.65 0.19 290);
+  --primary-foreground: oklch(0.985 0.005 290);
+  --info: oklch(0.66 0.15 255); /* blue */
+  --success: oklch(0.72 0.12 180); /* teal */
+  --warning: oklch(0.8 0.13 80);
+  --danger: oklch(0.65 0.19 25);
+  --danger-foreground: oklch(0.985 0.005 25);
+
+  --radius: 0.625rem;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-info: var(--info);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --animate-in: fade-in 160ms ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background:
+      radial-gradient(1200px 600px at 85% -10%, oklch(0.6 0.19 290 / 0.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, oklch(0.72 0.12 180 / 0.05), transparent 60%),
+      var(--background);
+    background-attachment: fixed;
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: oklch(0.6 0.19 290 / 0.35);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
