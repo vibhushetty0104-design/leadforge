@@ -15,6 +15,7 @@
     "build": "npm run build -w @leadforge/web",
     "lint": "npm run lint -w @leadforge/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test -w @leadforge/web",
     "generate:api": "npm run generate -w @leadforge/shared"
   }
 }

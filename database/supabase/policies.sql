@@ -59,7 +59,8 @@ declare
 begin
     foreach t in array array[
         'businesses', 'contacts', 'website_audits', 'audit_findings', 'lead_scores',
-        'jobs', 'campaigns', 'email_drafts', 'suppressions', 'activities'
+        'jobs', 'campaigns', 'email_drafts', 'suppressions', 'activities',
+        'import_batches', 'import_rows', 'website_inspections'
     ]
     loop
         execute format('drop policy if exists %I on public.%I', t || '_select_member', t);

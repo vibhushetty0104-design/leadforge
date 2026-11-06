@@ -96,8 +96,8 @@ The queue lives in Postgres (`packages/core/src/leadforge_core/queue.py`), so th
 - **States:** `queued → running → completed | failed`, with `attempts`, `last_error`, `result` and timestamps.
 - **Shutdown:** SIGTERM/SIGINT stop new claims, the current job finishes (handlers can poll
   `ctx.should_stop()`), and the process exits.
-- **Capability-based claiming:** a worker only claims job types it has handlers for. Phase 1 ships no domain
-  handlers, so jobs wait in `queued` instead of failing. The worker still performs lease recovery.
+- **Capability-based claiming:** a worker only claims job types it has handlers for, so jobs for capabilities
+  that are not deployed yet wait in `queued` instead of failing.
 
 ### Development seed data
 
@@ -116,17 +116,53 @@ refuses to run in staging or production.
   The public URL and publishable key reach the browser as props.
 - `output: "standalone"` produces a self-contained server for the Docker image.
 
-## Phase 2 plan (summary)
+## Prospect discovery
 
-1. **Crawler module** (`packages/core/crawler/`): an httpx fetcher that pins resolved IPs, applies
-   `resolve_public_addresses` before every hop, revalidates redirects, and enforces timeouts, a body-size cap
-   and per-domain concurrency limits.
-2. **Audit handler** (`website_audit`): fetch with Playwright (Chromium, no form submission or logins) and
-   parse with BeautifulSoup. Write `website_audits` and `audit_findings` with evidence. Lighthouse runs as a
-   separate optional step.
-3. **Scoring handler** (`lead_scoring`): a deterministic, versioned rule set over findings and business
-   attributes. Per-factor `breakdown` explains every score.
-4. **Import handler** (`import`): CSV upload stored in the job payload, validated row by row with the same
-   `BusinessCreate` rules, with a per-row error report.
-5. **API and UI:** `POST /businesses/{id}/audits`, audit list and detail endpoints, a findings view, and a
-   score column in the leads table.
+### Import pipeline
+
+```
+upload -> draft batch (raw rows) -> map columns -> validate + classify -> decide -> confirm -> job -> results
+```
+
+- `POST /imports/csv` takes the file as a raw streamed body rather than multipart, so the size limit applies while
+  reading and no multipart parser is needed. Rows are stored in `import_rows`; `businesses` is untouched.
+- `packages/core/.../import_pipeline.py` holds validation, classification and decisions. The API preview and the
+  worker call the same functions, and the worker re-checks every row because data may have changed since preview.
+- The worker commits every 200 rows and only ever reads rows still `pending`. A retry, a crash or a graceful
+  shutdown therefore resumes cleanly and cannot import a row twice. Counts are recomputed from the rows.
+
+### Duplicates and the domain discriminator
+
+A shared domain is evidence, not proof, so the classifier has two levels:
+
+| Match | Example | What happens |
+| --- | --- | --- |
+| Definite | Same domain and a compatible name; or same name and country with no websites | Follows the chosen policy |
+| Possible | Same domain but a different name; or same name and country on different websites | Held for a person |
+
+Hosts such as `facebook.com` carry many unrelated businesses, so their domain is not used as a signal at all.
+
+`businesses` keeps a unique index on `(organization_id, domain, domain_discriminator)`. Normal records use an empty
+discriminator, so accidental duplicates are still refused by the database, even under concurrent writes. A record
+someone deliberately keeps separate gets its own value. Shared-platform records use a hash of the URL.
+
+"Category" in the product is stored in the existing `industry` column.
+
+### Jobs added in Phase 2
+
+| Job | Purpose | Deduplicated by |
+| --- | --- | --- |
+| `import` | Applies a confirmed batch | Batch id |
+| `url_validation` | Records whether up to 50 websites respond | Batch and chunk |
+| `website_inspection` | Fetches one site and stores an extraction | Business id |
+
+`jobs.dedupe_key` has a partial unique index covering active jobs only. `DeferJob` puts a job back without spending
+an attempt, for throttling and shutdown. Failures are stored on `website_inspections`, never on the business.
+
+## Phase 3 plan (summary)
+
+1. **Audit handler** (`website_audit`): render with Playwright (Chromium, no form submission or logins), reusing
+   the URL safety rules. Write `website_audits` and `audit_findings` with evidence. Lighthouse is a separate step.
+2. **Scoring handler** (`lead_scoring`): a deterministic, versioned rule set over findings and business
+   attributes. A per-factor `breakdown` explains every score.
+3. **API and UI:** audit endpoints, a findings view, and a score column in the directory.

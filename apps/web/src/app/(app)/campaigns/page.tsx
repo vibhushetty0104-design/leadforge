@@ -11,7 +11,7 @@ export default function CampaignsPage() {
   return (
     <RoadmapSection
       title="Campaigns"
-      phase="Phase 3"
+      phase="Phase 4"
       icon={Send}
       description="Group prospects and prepare personalised, human-reviewed outreach."
       planned={[

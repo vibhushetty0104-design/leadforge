@@ -24,6 +24,16 @@ export const businessFormSchema = z.object({
     .string()
     .trim()
     .refine((value) => value === "" || /^[0-9+().\- ]{5,40}$/.test(value), "Enter a valid phone number"),
+  email: z
+    .string()
+    .trim()
+    .max(320, "Must be 320 characters or fewer")
+    .refine((value) => value === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), "Enter a valid email address"),
+  description: optionalText(5000),
+  source_url: optionalText(2048).refine(
+    (value) => value === "" || /^(https?:\/\/)?[^\s/$.?#][^\s]*\.[^\s]{2,}$/i.test(value),
+    "Enter a web address",
+  ),
   notes: optionalText(5000),
   status: z.enum(BUSINESS_STATUSES),
 });
@@ -38,6 +48,9 @@ export const emptyBusinessForm: BusinessFormValues = {
   region: "",
   country_code: "",
   phone: "",
+  email: "",
+  description: "",
+  source_url: "",
   notes: "",
   status: "new",
 };

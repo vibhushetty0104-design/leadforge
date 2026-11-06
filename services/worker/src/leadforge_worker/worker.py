@@ -16,7 +16,7 @@ from leadforge_core import queue
 from leadforge_core.db import session_scope
 from leadforge_core.log import correlation_id
 from leadforge_core.models import Job, JobType
-from leadforge_worker.handlers import HandlerRegistry, JobContext, PermanentJobError
+from leadforge_worker.handlers import DeferJob, HandlerRegistry, JobContext, PermanentJobError
 from leadforge_worker.settings import WorkerSettings
 
 logger = logging.getLogger("leadforge.worker")
@@ -138,10 +138,23 @@ class Worker:
                 job_type=job.type,
                 payload=dict(job.payload or {}),
                 attempt=job.attempts,
+                max_attempts=job.max_attempts,
                 session_factory=self._sessions,
                 _stop=job_stop,
+                _shutdown=self._stop,
+                _progress=lambda current, total: self._report_progress(job, current, total),
             )
             result = handler(context)
+        except DeferJob as exc:
+            with session_scope(self._sessions) as session:
+                queue.defer_job(
+                    session,
+                    job.id,
+                    self.worker_id,
+                    timedelta(seconds=exc.delay_seconds),
+                    exc.reason,
+                )
+            logger.info("job deferred", extra={**log_extra, "reason": exc.reason})
         except PermanentJobError as exc:
             logger.error("job failed permanently", extra={**log_extra, "error": str(exc)})
             self._record_failure(job, exc, retryable=False)
@@ -161,8 +174,18 @@ class Worker:
             heartbeat.join(timeout=5)
             correlation_id.reset(token)
 
+    def _report_progress(self, job: Job, current: int, total: int | None) -> None:
+        with session_scope(self._sessions) as session:
+            queue.update_progress(session, job.id, self.worker_id, current, total)
+
     def _record_failure(self, job: Job, exc: BaseException, *, retryable: bool) -> None:
-        message = f"{type(exc).__name__}: {exc}"
+        # last_error is shown to users; database errors can quote SQL and row data.
+        if isinstance(exc, PermanentJobError):
+            message = str(exc)
+        elif isinstance(exc, SQLAlchemyError):
+            message = "A database error interrupted this job."
+        else:
+            message = f"{type(exc).__name__}: {exc}"
         with session_scope(self._sessions) as session:
             status = queue.fail_job(session, job.id, self.worker_id, message, retryable=retryable)
         if status is None:

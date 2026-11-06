@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text, Uuid
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from leadforge_core.models.base import (
@@ -19,6 +19,8 @@ from leadforge_core.models.base import (
     utcnow,
 )
 from leadforge_core.models.enums import JobStatus, JobType
+
+ACTIVE_DEDUPE_CONDITION = "dedupe_key IS NOT NULL AND status IN ('queued', 'running')"
 
 
 class Job(UUIDPrimaryKeyMixin, OrganizationOwnedMixin, TimestampMixin, Base):
@@ -45,6 +47,12 @@ class Job(UUIDPrimaryKeyMixin, OrganizationOwnedMixin, TimestampMixin, Base):
     started_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     last_error: Mapped[str | None] = mapped_column(Text)
+    progress_current: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    progress_total: Mapped[int | None] = mapped_column(Integer)
+    # At most one active (queued or running) job per organization and key.
+    dedupe_key: Mapped[str | None] = mapped_column(String(120))
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("profiles.id", ondelete="SET NULL")
     )
@@ -56,4 +64,12 @@ class Job(UUIDPrimaryKeyMixin, OrganizationOwnedMixin, TimestampMixin, Base):
         Index("ix_jobs_claim", "status", "priority", "run_after"),
         Index("ix_jobs_lease_expires_at", "lease_expires_at"),
         Index("ix_jobs_org_status", "organization_id", "status"),
+        Index(
+            "uq_jobs_active_dedupe_key",
+            "organization_id",
+            "dedupe_key",
+            unique=True,
+            postgresql_where=text(ACTIVE_DEDUPE_CONDITION),
+            sqlite_where=text(ACTIVE_DEDUPE_CONDITION),
+        ),
     )

@@ -31,9 +31,11 @@ schema is committed at [`packages/shared/openapi.json`](../packages/shared/opena
 | --- | --- |
 | 401 | `unauthenticated` |
 | 403 | `organization_access_denied`, `insufficient_role` |
-| 404 | `not_found`, `business_not_found` |
-| 409 | `business_already_exists`, `organization_limit_reached` |
-| 422 | `validation_error` (`details` is a list of `{loc, msg, type}`) |
+| 404 | `not_found`, `business_not_found`, `import_not_found`, `job_not_found` |
+| 409 | `business_already_exists`, `business_has_no_website`, `organization_limit_reached`, `import_not_editable`, `import_not_mapped` |
+| 413 | `import_too_large`, `import_too_many_rows` |
+| 415 | `unsupported_media_type` |
+| 422 | `validation_error` (`details` is a list of `{loc, msg, type}`), `import_invalid_csv`, `import_invalid_file`, `import_invalid_mapping` |
 | 500 | `internal_error` (details only in server logs) |
 | 503 | `auth_unavailable` (JWKS unreachable) |
 
@@ -61,7 +63,8 @@ open/overdue follow-ups, job counts by status, the 5 most recent businesses, and
 
 ### `GET /api/v1/businesses` (org-scoped)
 
-Query: `limit`, `offset`, `q` (name or domain contains, 1–100 chars, wildcards literal), and `status`.
+Query: `limit`, `offset`, `q` (name or domain contains, wildcards literal), `status`, `industry`, `country_code`,
+`source`, `website_status`, `has_email`, `has_website`, `import_id`.
 
 ### `POST /api/v1/businesses` (org-scoped)
 
@@ -79,9 +82,11 @@ Query: `limit`, `offset`, `q` (name or domain contains, 1–100 chars, wildcards
 }
 ```
 
-Only `name` is required. `website_url` is normalised (`https://` added, lowercased host, fragment removed) and
-must be a public destination. `domain` is derived from it (minus `www.`) and must be unique within the
-organization (409 otherwise). The server always sets `source` to `manual` and records the creator.
+Only `name` is required; `email`, `description` and `source_url` are also accepted. `website_url` is normalised
+(`https://` added, lowercased host, default port, trailing slash and fragment removed) and must be a public
+destination. The submitted form is kept as `website_url_original`. A detected duplicate returns 409 with
+`details.kind` (`definite` or `possible`), `reason` and `existing_id`; resend with `"allow_duplicate": true` to
+keep it as a separate business. The server always sets `source` to `manual` and records the creator.
 
 ### `GET /api/v1/businesses/{business_id}` (org-scoped)
 
@@ -91,6 +96,56 @@ Returns 404 for unknown ids **and** for ids belonging to other organizations.
 
 Returns 204. Cascades to contacts, audits, findings, scores, drafts and activities, and writes an audit-log
 entry.
+
+### `PATCH /api/v1/businesses/{business_id}` (org-scoped)
+
+Send only the fields to change; `null` clears an optional field. Changing `website_url` resets `website_status`.
+Duplicates are handled as in `POST`.
+
+### `POST /api/v1/businesses/export` (org-scoped)
+
+Body: any list filters, or `business_ids`. Returns a CSV attachment of at most 10,000 rows. Cells that could be read
+as spreadsheet formulas are neutralised.
+
+### `POST /api/v1/businesses/{business_id}/inspect` (org-scoped)
+
+Returns 202 with the job. If one is already active for this business, that job is returned instead.
+
+### `GET /api/v1/businesses/{business_id}/inspection` (org-scoped)
+
+`{ inspection, active_job }`: the latest result, if any, and the running job, if any.
+
+### `POST /api/v1/businesses/bulk-inspect` (org-scoped)
+
+Body: `{ "business_ids": [...] }`, up to 100. Returns `queued`, `already_active`, `skipped_no_website`, `not_found`.
+
+### `GET /api/v1/jobs/{job_id}` (org-scoped)
+
+Status, attempts, `progress_current`, `progress_total`, `last_error` and `result`.
+
+### `GET /api/v1/discovery/summary` (org-scoped)
+
+Website and email coverage, counts by `website_status`, active and failed jobs, and the 5 latest imports.
+
+## CSV imports
+
+| Step | Endpoint |
+| --- | --- |
+| Upload | `POST /imports/csv?filename=leads.csv`, with the raw file as a `text/csv` body |
+| Map and validate | `POST /imports/{id}/mapping` with `{ "column_mapping": { "business_name": "Company", ... } }` |
+| Review rows | `GET /imports/{id}/results?outcome=invalid` or `?duplicates_only=true` |
+| Decide one row | `PATCH /imports/{id}/rows/{row_id}` with `{ "resolution": "skip" \| "update" \| "create" \| null }` |
+| Confirm | `POST /imports/{id}/confirm` with `{ "duplicate_policy": "skip", "validate_websites": true }` |
+| Follow progress | `GET /imports/{id}` |
+| History | `GET /imports` |
+| Discard a draft | `POST /imports/{id}/cancel` |
+
+Mapping fields: `business_name` (required), `website`, `country`, `city`, `category`, `email`, `phone`, `description`,
+`source_url`. Nothing is written to `businesses` before confirmation. `update` fills blank fields only and requires
+owner or admin. Possible duplicates without a row decision end as `needs_review`, and nothing is written for them.
+
+Invalid names, websites and emails reject the row. Unrecognised countries, phones and source URLs leave the value
+blank with a warning. Limits: `IMPORT_MAX_UPLOAD_BYTES` (4 MB) and `IMPORT_MAX_ROWS` (5,000).
 
 ## Example
 

@@ -14,7 +14,7 @@ export function Sidebar() {
           <NavLinks />
         </Suspense>
       </div>
-      <p className="px-3 text-xs text-subtle-foreground">v0.1 · Phase 1 foundation</p>
+      <p className="px-3 text-xs text-subtle-foreground">v0.2 · Phase 2 discovery</p>
     </aside>
   );
 }

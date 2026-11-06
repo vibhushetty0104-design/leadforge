@@ -1,6 +1,6 @@
 # LEADFORGE background worker. Build from the repository root:
 #   docker build -f services/worker/Dockerfile -t leadforge-worker .
-# Phase 2 will add Playwright + Chromium for website audits (see docs/ARCHITECTURE.md).
+# Phase 3 will add Playwright + Chromium for website audits (see docs/ARCHITECTURE.md).
 FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

@@ -11,6 +11,23 @@ type Schemas = components["schemas"];
 
 export type BusinessRead = Schemas["BusinessRead"];
 export type BusinessCreate = Schemas["BusinessCreate"];
+export type BusinessUpdate = Schemas["BusinessUpdate"];
+export type WebsiteStatus = Schemas["WebsiteStatus"];
+export type BulkInspectResult = Schemas["BulkInspectResult"];
+export type BusinessExportRequest = Schemas["BusinessExportRequest"];
+export type ImportBatchRead = Schemas["ImportBatchRead"];
+export type ImportBatchPage = Schemas["Page_ImportBatchRead_"];
+export type ImportDetail = Schemas["ImportDetail"];
+export type ImportField = Schemas["ImportField"];
+export type ImportStatus = Schemas["ImportStatus"];
+export type ImportRowRead = Schemas["ImportRowRead"];
+export type ImportRowPage = Schemas["Page_ImportRowRead_"];
+export type ImportRowOutcome = Schemas["ImportRowOutcome"];
+export type DuplicateAction = Schemas["DuplicateAction"];
+export type InspectionRead = Schemas["InspectionRead"];
+export type BusinessInspection = Schemas["BusinessInspection"];
+export type DiscoverySummary = Schemas["DiscoverySummary"];
+export type JobRead = Schemas["JobRead"];
 export type BusinessSummary = Schemas["BusinessSummary"];
 export type BusinessStatus = Schemas["BusinessStatus"];
 export type RecordSource = Schemas["RecordSource"];
@@ -35,6 +52,19 @@ export const BUSINESS_STATUSES = [
   "lost",
   "disqualified",
 ] as const satisfies readonly BusinessStatus[];
+
+export const WEBSITE_STATUSES = [
+  "unknown",
+  "reachable",
+  "unreachable",
+  "blocked",
+] as const satisfies readonly WebsiteStatus[];
+
+export const RECORD_SOURCES = [
+  "manual",
+  "csv_import",
+  "development_seed",
+] as const satisfies readonly RecordSource[];
 
 // Compile-time guarantee that the list above covers every status in the API enum.
 type MissingStatus = Exclude<BusinessStatus, (typeof BUSINESS_STATUSES)[number]>;

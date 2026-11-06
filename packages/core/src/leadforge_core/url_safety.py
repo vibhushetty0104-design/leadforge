@@ -55,11 +55,16 @@ class UnsafeURLError(ValueError):
     """The URL is malformed or points somewhere LEADFORGE must not connect to."""
 
 
+class HostResolutionError(UnsafeURLError):
+    """The hostname did not resolve; a reachability problem, not a safety one."""
+
+
 @dataclass(frozen=True, slots=True)
 class NormalizedURL:
     url: str
     host: str
     domain: str
+    original: str
 
 
 def is_public_ip(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
@@ -149,14 +154,16 @@ def normalize_public_url(raw: str) -> NormalizedURL:
             raise UnsafeURLError("hostname is not a valid domain name") from exc
         _validate_hostname(host)
 
-    netloc = host if port is None else f"{host}:{port}"
-    path = parts.path or "/"
+    # Default ports and trailing slashes do not change the destination.
+    default_port = 443 if scheme == "https" else 80
+    netloc = host if port in (None, default_port) else f"{host}:{port}"
+    path = parts.path.rstrip("/") or "/"
     url = urlunsplit((scheme, netloc, path, parts.query, ""))
     if len(url) > MAX_URL_LENGTH:
         raise UnsafeURLError("URL is too long")
 
     domain = host[4:] if host.startswith("www.") else host
-    return NormalizedURL(url=url, host=host, domain=domain)
+    return NormalizedURL(url=url, host=host, domain=domain, original=raw.strip())
 
 
 def resolve_public_addresses(host: str, port: int = 443) -> list[str]:
@@ -174,7 +181,7 @@ def resolve_public_addresses(host: str, port: int = 443) -> list[str]:
     try:
         infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
-        raise UnsafeURLError(f"could not resolve {host}") from exc
+        raise HostResolutionError(f"could not resolve {host}") from exc
 
     addresses: list[str] = []
     for info in infos:
@@ -183,5 +190,5 @@ def resolve_public_addresses(host: str, port: int = 443) -> list[str]:
             raise UnsafeURLError(f"{host} resolves to a non-public address")
         addresses.append(address.compressed)
     if not addresses:
-        raise UnsafeURLError(f"could not resolve {host}")
+        raise HostResolutionError(f"could not resolve {host}")
     return sorted(set(addresses))

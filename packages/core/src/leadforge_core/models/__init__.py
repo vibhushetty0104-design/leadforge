@@ -8,16 +8,23 @@ from leadforge_core.models.enums import (
     AuditStatus,
     BusinessStatus,
     CampaignStatus,
+    DuplicateAction,
     EmailDraftStatus,
     FindingCategory,
     FindingSeverity,
+    ImportRowOutcome,
+    ImportStatus,
+    InspectionStatus,
     JobStatus,
     JobType,
     MemberRole,
     RecordSource,
     SuppressionReason,
+    WebsiteStatus,
 )
 from leadforge_core.models.identity import Organization, OrganizationMember, Profile
+from leadforge_core.models.imports import ImportBatch, ImportRow
+from leadforge_core.models.inspection import WebsiteInspection
 from leadforge_core.models.jobs import Job
 from leadforge_core.models.outreach import Campaign, EmailDraft, Suppression
 from leadforge_core.models.prospects import Business, Contact
@@ -34,10 +41,16 @@ __all__ = [
     "Campaign",
     "CampaignStatus",
     "Contact",
+    "DuplicateAction",
     "EmailDraft",
     "EmailDraftStatus",
     "FindingCategory",
     "FindingSeverity",
+    "ImportBatch",
+    "ImportRow",
+    "ImportRowOutcome",
+    "ImportStatus",
+    "InspectionStatus",
     "Job",
     "JobStatus",
     "JobType",
@@ -50,4 +63,6 @@ __all__ = [
     "Suppression",
     "SuppressionReason",
     "WebsiteAudit",
+    "WebsiteInspection",
+    "WebsiteStatus",
 ]

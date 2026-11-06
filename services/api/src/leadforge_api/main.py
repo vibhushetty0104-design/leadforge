@@ -14,7 +14,7 @@ from leadforge_api import __version__
 from leadforge_api.auth import SupabaseTokenVerifier
 from leadforge_api.errors import register_error_handlers
 from leadforge_api.middleware import RequestContextMiddleware
-from leadforge_api.routers import businesses, dashboard, health, me
+from leadforge_api.routers import businesses, dashboard, health, imports, jobs, me
 from leadforge_api.schemas.common import ErrorResponse
 from leadforge_api.settings import ApiSettings, get_settings
 from leadforge_core.db import build_session_factory, engine_from_settings
@@ -24,7 +24,7 @@ logger = logging.getLogger("leadforge.api")
 
 API_PREFIX = "/api/v1"
 ERROR_RESPONSES: dict[int | str, dict[str, object]] = {
-    status: {"model": ErrorResponse} for status in (401, 403, 404, 409, 422, 500)
+    status: {"model": ErrorResponse} for status in (401, 403, 404, 409, 413, 415, 422, 500)
 }
 
 
@@ -67,6 +67,6 @@ def create_app(settings: ApiSettings | None = None, *, engine: Engine | None = N
     app.add_middleware(RequestContextMiddleware)
 
     app.include_router(health.router)
-    for router in (me.router, dashboard.router, businesses.router):
+    for router in (me.router, dashboard.router, businesses.router, imports.router, jobs.router):
         app.include_router(router, prefix=API_PREFIX, responses=ERROR_RESPONSES)
     return app

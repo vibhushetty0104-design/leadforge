@@ -56,7 +56,9 @@ and the health check path is `/health`. In production the API refuses to start w
 
 ## 4. Worker
 
-Same `DATABASE_URL` and `ENVIRONMENT`. Build with `services/worker/Dockerfile`. Allow a graceful stop period
+Same `DATABASE_URL` and `ENVIRONMENT`. The worker now processes imports and fetches websites, so imports stay
+`queued` until one is running. It needs outbound HTTP and HTTPS. Where your platform allows it, block egress to
+private ranges as well. Build with `services/worker/Dockerfile`. Allow a graceful stop period
 (≥ 60 s) so the current job can finish on deploys. Run more replicas to scale; `SKIP LOCKED` keeps them from
 colliding.
 
@@ -69,6 +71,10 @@ SUPABASE_URL=https://<ref>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=<publishable/anon key>
 API_BASE_URL=https://<api-host>
 ```
+
+CSV uploads pass through this app. Vercel limits request bodies to about 4.5 MB, which is why
+`IMPORT_MAX_UPLOAD_BYTES` defaults to 4 MB. On a container host you can raise it, along with `MAX_UPLOAD_BYTES` in
+`apps/web/src/lib/csv.ts`.
 
 **Container:** build `apps/web/Dockerfile` and supply the same variables at runtime. They are read per request,
 not baked in at build time.

@@ -8,7 +8,12 @@ version = "0.1.0"
 description = "LEADFORGE background job worker."
 requires-python = ">=3.11"
 license = "MIT"
-dependencies = ["leadforge-core"]
+dependencies = [
+  "leadforge-core",
+  "httpx>=0.28,<1",
+  "httpcore>=1.0.5,<2",
+  "beautifulsoup4>=4.12,<5",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "ruff>=0.8", "mypy>=1.13"]

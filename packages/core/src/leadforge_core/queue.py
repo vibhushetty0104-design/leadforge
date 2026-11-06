@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import ColumnElement, and_, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from leadforge_core.models import Job, JobStatus, JobType
@@ -52,6 +53,7 @@ def enqueue(
     max_attempts: int = 3,
     run_after: datetime | None = None,
     created_by: uuid.UUID | None = None,
+    dedupe_key: str | None = None,
 ) -> Job:
     job = Job(
         organization_id=organization_id,
@@ -61,10 +63,53 @@ def enqueue(
         max_attempts=max_attempts,
         run_after=run_after or utcnow(),
         created_by=created_by,
+        dedupe_key=dedupe_key,
     )
     session.add(job)
     session.flush()
     return job
+
+
+def find_active(session: Session, organization_id: uuid.UUID, dedupe_key: str) -> Job | None:
+    return session.scalar(
+        select(Job).where(
+            Job.organization_id == organization_id,
+            Job.dedupe_key == dedupe_key,
+            Job.status.in_([JobStatus.QUEUED, JobStatus.RUNNING]),
+        )
+    )
+
+
+def enqueue_unique(
+    session: Session,
+    *,
+    organization_id: uuid.UUID,
+    job_type: JobType,
+    dedupe_key: str,
+    **kwargs: Any,
+) -> tuple[Job, bool]:
+    """Enqueue unless an equivalent job is active. Returns ``(job, created)``.
+
+    The partial unique index settles races between concurrent requests.
+    """
+    existing = find_active(session, organization_id, dedupe_key)
+    if existing is not None:
+        return existing, False
+    try:
+        with session.begin_nested():
+            job = enqueue(
+                session,
+                organization_id=organization_id,
+                job_type=job_type,
+                dedupe_key=dedupe_key,
+                **kwargs,
+            )
+    except IntegrityError:
+        existing = find_active(session, organization_id, dedupe_key)
+        if existing is None:
+            raise
+        return existing, False
+    return job, True
 
 
 def claim_jobs(
@@ -126,6 +171,48 @@ def extend_lease(
         update(Job)
         .where(_fenced(job_id, worker_id))
         .values(lease_expires_at=now + lease, updated_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+def update_progress(
+    session: Session, job_id: uuid.UUID, worker_id: str, current: int, total: int | None = None
+) -> bool:
+    values: dict[str, Any] = {"progress_current": current, "updated_at": _now(session)}
+    if total is not None:
+        values["progress_total"] = total
+    result = session.execute(
+        update(Job)
+        .where(_fenced(job_id, worker_id))
+        .values(**values)
+        .execution_options(synchronize_session=False)
+    )
+    return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+def defer_job(
+    session: Session, job_id: uuid.UUID, worker_id: str, delay: timedelta, reason: str
+) -> bool:
+    """Put a running job back in the queue without spending an attempt.
+
+    For work that could not start or finish through no fault of its own: a
+    per-domain throttle window, or a worker shutting down mid-job.
+    """
+    now = _now(session)
+    result = session.execute(
+        update(Job)
+        .where(_fenced(job_id, worker_id))
+        .values(
+            status=JobStatus.QUEUED,
+            run_after=now + delay,
+            attempts=Job.attempts - 1,
+            locked_by=None,
+            locked_at=None,
+            lease_expires_at=None,
+            last_error=reason[:MAX_ERROR_LENGTH],
+            updated_at=now,
+        )
         .execution_options(synchronize_session=False)
     )
     return bool(result.rowcount)  # type: ignore[attr-defined]

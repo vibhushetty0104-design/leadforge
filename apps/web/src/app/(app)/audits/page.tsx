@@ -11,7 +11,7 @@ export default function AuditsPage() {
   return (
     <RoadmapSection
       title="Audits"
-      phase="Phase 2"
+      phase="Phase 3"
       icon={ScanSearch}
       description="Measured website quality and conversion findings for each prospect."
       planned={[
