@@ -1,4 +1,4 @@
-import type { BusinessRead } from "@leadforge/shared";
+import type { BusinessInspection, BusinessRead } from "@leadforge/shared";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -7,9 +7,11 @@ import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/data/page-header";
 import { ErrorState, SeedDataBanner } from "@/components/data/states";
-import { BusinessStatusBadge } from "@/components/data/status-badge";
+import { BusinessStatusBadge, WebsiteStatusBadge } from "@/components/data/status-badge";
 import { resolveOrgViewer } from "@/components/layout/org-gate";
+import { BusinessFormDialog } from "@/components/leads/business-form-dialog";
 import { DeleteBusinessButton } from "@/components/leads/delete-business-button";
+import { InspectionPanel } from "@/components/leads/inspection-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, humanize } from "@/lib/format";
@@ -21,9 +23,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <dt className="text-xs font-medium tracking-wide text-subtle-foreground uppercase">{label}</dt>
-      <dd className="text-sm">{children ?? "—"}</dd>
+      <dd className="text-sm break-words">{children ?? "—"}</dd>
     </div>
   );
 }
@@ -36,7 +38,10 @@ export default async function BusinessPage({ params }: { params: Promise<{ busin
   if (!gate.ok) return gate.fallback;
   const { viewer } = gate;
 
-  const result = await orgRequest<BusinessRead>(viewer, `/api/v1/businesses/${businessId}`);
+  const [result, inspection] = await Promise.all([
+    orgRequest<BusinessRead>(viewer, `/api/v1/businesses/${businessId}`),
+    orgRequest<BusinessInspection>(viewer, `/api/v1/businesses/${businessId}/inspection`),
+  ]);
   if (!result.ok) {
     if (result.error.status === 404) notFound();
     return <ErrorState title="Could not load this business" error={result.error} />;
@@ -63,52 +68,77 @@ export default async function BusinessPage({ params }: { params: Promise<{ busin
           )
         }
         actions={
-          canDelete ? <DeleteBusinessButton businessId={b.id} businessName={b.name} redirectTo="/leads" /> : null
+          <>
+            <BusinessFormDialog key={b.updated_at} business={b} />
+            {canDelete ? <DeleteBusinessButton businessId={b.id} businessName={b.name} redirectTo="/leads" /> : null}
+          </>
         }
       />
       {b.source === "development_seed" ? <SeedDataBanner /> : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <Field label="Status">
-                <BusinessStatusBadge status={b.status} />
-              </Field>
-              <Field label="Industry">{b.industry}</Field>
-              <Field label="Location">
-                {[b.city, b.region, b.country_code].filter(Boolean).join(", ") || null}
-              </Field>
-              <Field label="Phone">{b.phone}</Field>
-              <Field label="Source">{humanize(b.source)}</Field>
-              <Field label="Domain">{b.domain}</Field>
-              <div className="sm:col-span-2">
-                <Field label="Notes">
-                  {b.notes ? <p className="whitespace-pre-wrap text-muted-foreground">{b.notes}</p> : null}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-5">
+        <div className="space-y-4 lg:col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Field label="Status">
+                  <BusinessStatusBadge status={b.status} />
                 </Field>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Record</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-4">
-              <Field label="Created">{formatDateTime(b.created_at)}</Field>
-              <Field label="Last updated">{formatDateTime(b.updated_at)}</Field>
-              <Field label="Website audit">
-                <span className="text-muted-foreground">
-                  Automated audits arrive in Phase 2. No audit data exists for this business yet.
-                </span>
-              </Field>
-            </dl>
-          </CardContent>
-        </Card>
+                <Field label="Website">
+                  {b.website_url ? <WebsiteStatusBadge status={b.website_status} /> : null}
+                </Field>
+                <Field label="Category">{b.industry}</Field>
+                <Field label="Location">{[b.city, b.region, b.country_code].filter(Boolean).join(", ") || null}</Field>
+                <Field label="Email">{b.email}</Field>
+                <Field label="Phone">{b.phone}</Field>
+                <Field label="Domain">{b.domain}</Field>
+                <Field label="Source">{humanize(b.source)}</Field>
+                {b.website_url_original && b.website_url_original !== b.website_url ? (
+                  <Field label="Website as submitted">{b.website_url_original}</Field>
+                ) : null}
+                {b.source_url ? (
+                  <Field label="Source URL">
+                    <a href={b.source_url} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-primary-hover">
+                      {b.source_url}
+                    </a>
+                  </Field>
+                ) : null}
+                <div className="sm:col-span-2">
+                  <Field label="Description">
+                    {b.description ? <p className="whitespace-pre-wrap text-muted-foreground">{b.description}</p> : null}
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Notes">
+                    {b.notes ? <p className="whitespace-pre-wrap text-muted-foreground">{b.notes}</p> : null}
+                  </Field>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Record</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                <Field label="Created">{formatDateTime(b.created_at)}</Field>
+                <Field label="Last updated">{formatDateTime(b.updated_at)}</Field>
+                <Field label="Website checked">{b.website_checked_at ? formatDateTime(b.website_checked_at) : null}</Field>
+              </dl>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="lg:col-span-2">
+          {inspection.ok ? (
+            <InspectionPanel businessId={b.id} initial={inspection.data} hasWebsite={Boolean(b.website_url)} />
+          ) : (
+            <ErrorState title="Could not load the inspection" error={inspection.error} />
+          )}
+        </div>
       </div>
     </div>
   );

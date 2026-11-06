@@ -1,25 +1,30 @@
-<<<<<<< HEAD
 # LEADFORGE
 
 **Prospect intelligence and website auditing for freelance developers and digital agencies.**
+
+_Where Every Lead Forges a New Opportunity._
 
 LEADFORGE helps you find businesses whose websites are holding them back, prove it with measured
 evidence, and run human-reviewed outreach without paying for AI APIs, scraping services or lead
 databases.
 
-> **Status: Phase 1 (foundation).** Authentication, multi-tenant data model, the business/leads API and UI,
-> a live dashboard and the background-job infrastructure are in place. Website audits, scoring and outreach
-> land in later phases (see [Roadmap](#roadmap)).
+> **Status: Phase 2 (prospect discovery).** On top of the Phase 1 foundation (authentication, multi-tenant
+> data model, leads API and UI, dashboard, job queue), LEADFORGE now imports CSVs, detects duplicates, checks
+> websites and extracts public business information. Audits, scoring and outreach land in later phases
+> (see [Roadmap](#roadmap)).
 
 ---
 
 ## Features
 
-| Area | Phase 1 (now) | Later |
+| Area | Available now | Later |
 | --- | --- | --- |
-| Leads | Add, search, filter, paginate, view and delete businesses; duplicate detection by domain; SSRF-safe URL validation | CSV import (worker job) |
+| CSV import | Drag-and-drop upload, column mapping, row validation, duplicate review, background processing with live progress, per-row results and import history | Scheduled imports |
+| Duplicates | By domain, and by name and country. Possible matches go to a person; a shared domain alone never merges two businesses | Merging records |
+| Website inspection | Title, meta description, canonical URL, headings, contact links, displayed emails, telephone links, social links, language and status | Lighthouse and full audits |
+| URL safety | Normalisation, private-network and metadata blocking, DNS pinning at connection time, revalidated redirects, time and size limits, robots.txt, per-domain throttling | |
+| Directory | Search, filters, bulk inspection, CSV export, editing, source attribution | Saved views |
 | Dashboard | Live KPIs from your organization's data; seed data clearly labelled | Trends |
-| Audits | Data model, job queue, honest "not yet available" UI | Playwright + BeautifulSoup checks, Lighthouse |
 | Scoring | Versioned, explainable `lead_scores` model | Transparent rule-based scoring engine |
 | Campaigns / CRM | Data model (campaigns, drafts, suppressions, activities) | Draft review, follow-ups, pipeline board |
 | Platform | Supabase Auth, org isolation, RLS deny-by-default, audit log, structured errors, CI | Team invites, rate limiting |
@@ -29,10 +34,11 @@ databases.
 
 ## Roadmap
 
-1. **Phase 1 — Foundation** (this release): monorepo, auth, tenancy, schema, leads API/UI, dashboard, job queue, CI.
-2. **Phase 2 — Audits & scoring**: crawler with SSRF protections, Playwright/BeautifulSoup checks, findings,
-   Lighthouse, rule-based lead scoring, CSV import.
-3. **Phase 3 — Outreach & CRM**: campaigns, template-based personalised drafts, approval flow, suppression
+1. **Phase 1 — Foundation** (done): monorepo, auth, tenancy, schema, leads API/UI, dashboard, job queue, CI.
+2. **Phase 2 — Prospect discovery** (this release): CSV import, duplicate detection, URL safety, website
+   inspection, background jobs with progress, Discovery workspace, directory filters and export.
+3. **Phase 3 — Audits & scoring**: Playwright checks, findings with evidence, Lighthouse, rule-based lead scoring.
+4. **Phase 4 — Outreach & CRM**: campaigns, template-based personalised drafts, approval flow, suppression
    enforcement, activity timeline, follow-up reminders, pipeline board.
 
 ## Technology stack
@@ -41,7 +47,8 @@ databases.
   components on Radix, Lucide, React Hook Form + Zod, Sonner toasts, `@supabase/ssr`.
 - **Backend:** Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, PyJWT, psycopg 3.
 - **Database:** PostgreSQL 16 (Supabase-compatible, RLS enabled).
-- **Worker:** Python process with a Postgres-backed queue (`FOR UPDATE SKIP LOCKED`, leases, retries).
+- **Worker:** Python process with a Postgres-backed queue (`FOR UPDATE SKIP LOCKED`, leases, retries), plus
+  httpx and BeautifulSoup for website inspection. No Redis and no browser automation.
 - **Infra:** Docker Compose, GitHub Actions, Vercel-compatible frontend, container-ready API and worker.
 
 ## Architecture overview
@@ -140,6 +147,9 @@ refuses to run when `ENVIRONMENT` is staging or production.
 | `CORS_ALLOWED_ORIGINS` | API | for browser clients | Exact origins, no wildcards |
 | `ENVIRONMENT` | all | no | `production`/`staging` enable strict validation |
 | `POSTGRES_PASSWORD` | Docker Compose | for compose | Local container only |
+| `IMPORT_MAX_UPLOAD_BYTES` | API | no | Default 4 MB, which stays under Vercel's request limit |
+| `IMPORT_MAX_ROWS` | API | no | Default 5,000 rows per file |
+| `FETCH_DOMAIN_INTERVAL_SECONDS` | worker | no | Minimum gap between requests to one host (default 5) |
 | `TEST_DATABASE_URL` | tests | no | Run the suite on Postgres (the database is wiped) |
 
 The full annotated list is in [.env.example](.env.example) and [apps/web/.env.example](apps/web/.env.example).
@@ -167,6 +177,7 @@ mypy packages/core/src services/api/src services/worker/src
 # Frontend
 npm run lint
 npm run typecheck
+npm test
 npm run build
 
 # Regenerate the TypeScript API contract after changing API schemas
@@ -200,15 +211,11 @@ Step-by-step instructions: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 - Every API request is authenticated with a verified Supabase JWT, and organization access is checked against
   membership on every call. Request bodies cannot set `organization_id` or `created_by`.
 - RLS is enabled on every table with no policies, so Supabase's public Data API exposes nothing by default.
-- Website URLs are validated against private, loopback, link-local and metadata destinations; the crawler
-  rules for Phase 2 are specified in [docs/SECURITY.md](docs/SECURITY.md).
+- Website URLs are validated against private, loopback, link-local and metadata destinations, and the fetcher
+  re-checks every resolved address at connection time. See [docs/SECURITY.md](docs/SECURITY.md).
 
 Report vulnerabilities privately as described in [docs/SECURITY.md](docs/SECURITY.md).
 
 ## License
 
 [MIT](LICENSE)
-=======
-# leadforge
-something that will make finding clients easier.. Where Every Lead Forges a New Opportunity.
->>>>>>> origin/main

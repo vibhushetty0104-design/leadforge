@@ -22,6 +22,13 @@ class WorkerSettings(CoreSettings):
     max_poll_interval_seconds: float = Field(default=30.0, gt=0, le=600)
     lease_seconds: int = Field(default=300, ge=30, le=3600)
     lease_recovery_interval_seconds: float = Field(default=60.0, gt=0, le=3600)
+    fetch_connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
+    fetch_read_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
+    fetch_total_timeout_seconds: float = Field(default=25.0, gt=0, le=300)
+    fetch_max_bytes: int = Field(default=2 * 1024 * 1024, ge=64 * 1024, le=50 * 1024 * 1024)
+    fetch_max_redirects: int = Field(default=5, ge=0, le=10)
+    # Minimum gap between requests to one host.
+    fetch_domain_interval_seconds: float = Field(default=5.0, ge=0, le=300)
     # Optional comma-separated subset of job types this worker should process.
     worker_job_types: Annotated[list[JobType], NoDecode] = Field(default_factory=list)
 

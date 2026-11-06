@@ -9,7 +9,10 @@ import { SEGMENT_LABELS } from "@/components/layout/nav-items";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function labelFor(segment: string, parent: string | undefined): string {
-  if (UUID.test(segment)) return parent === "leads" ? "Business" : "Details";
+  if (UUID.test(segment)) {
+    if (parent === "leads") return "Business";
+    return parent === "imports" ? "Import" : "Details";
+  }
   return SEGMENT_LABELS[segment] ?? segment;
 }
 

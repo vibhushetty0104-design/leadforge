@@ -58,21 +58,48 @@ Please do **not** open a public issue. Use GitHub's private vulnerability report
   internal suffixes (`.local`, `.internal`, `.lan`, `.home.arpa`, `.corp`, …) and cloud metadata hostnames;
 - normalises IDNs to punycode, lowercases the host, drops fragments and caps length.
 
-## Crawler rules (required for Phase 2)
+## Fetching websites (implemented)
 
-The crawler must not ship until all of these hold:
+All outbound requests go through `leadforge_worker.web.safe_fetch.SafeFetcher`. Validating a URL string is not
+enough, because a public name can resolve to a private address or change between check and connection, so:
 
-1. Call `resolve_public_addresses(host)` **immediately before every connection**, and connect to the vetted
-   IP (pinning) so a second DNS lookup cannot rebind to a private address.
-2. Follow redirects manually. Re-run `normalize_public_url` and `resolve_public_addresses` for every hop, and
-   cap redirects at 5.
-3. Enforce connect, read and total timeouts, a maximum response size (stream and abort), and a content-type
-   allow-list.
-4. Limit concurrency per registrable domain and globally. Identify with an honest User-Agent and respect
-   `robots.txt`.
-5. Never submit forms, log in, execute purchases or follow `mailto:`/`tel:`/`javascript:` links. Playwright
-   runs with downloads disabled and a fresh context per audit.
-6. Run the worker without access to internal networks where the platform allows it (egress restrictions).
+1. **Addresses are checked at connection time.** A custom network backend resolves the hostname, requires
+   *every* answer to be public, and connects straight to a vetted IP. There is no second lookup to rebind, and
+   TLS still verifies the certificate against the hostname.
+2. **Redirects are followed by hand**, at most 5, and each hop is revalidated before it is requested.
+3. **Time is bounded** by connect and read timeouts plus a wall-clock deadline for the whole fetch.
+4. **Size is bounded** while streaming: 2 MiB of *decompressed* bytes by default, so a missing `Content-Length`
+   or a gzip bomb cannot exceed it. Non-HTML responses are not read.
+5. **`trust_env` is off**, so an inherited proxy setting cannot bypass the pinned backend.
+6. **robots.txt is honoured.** It is treated as a limit, never as permission to reach anything restricted. A
+   server error on robots.txt counts as a disallow, per RFC 9309.
+7. **Requests are throttled per host** using the time of the last inspection, across all workers and
+   organizations. A job inside the window is deferred without spending a retry attempt.
+
+The worker only issues `GET` requests with a plain, honest User-Agent. It sends no cookies, and it never
+submits forms, logs in, or attempts to get past CAPTCHAs or access controls. A `401`, `403` or `429` is recorded
+as `blocked` and left alone.
+
+### Data minimisation
+
+Extraction keeps what a visitor can already see, in small capped amounts: up to 10 displayed emails and 10
+telephone links, for example. Addresses in scripts and HTML comments are ignored, and findings stay on the
+inspection record. They are never copied onto the business automatically.
+
+### Remaining limits
+
+Per-host throttling reads the last inspection, so two workers can race within one window. Concurrency is otherwise
+limited by the number of workers, because each processes one job at a time. For stronger isolation, restrict the
+worker's network egress at the platform level as well.
+
+## CSV imports
+
+- Uploads are streamed to a spooled temp file and counted as they arrive, so `Content-Length` is not trusted.
+- Parsing is lazy, with limits on rows, columns and field size. Binary files and malformed quoting are rejected
+  with a clear message.
+- Nothing reaches `businesses` until a person confirms, and a member cannot choose an action that changes
+  existing records. Updates fill blank fields only, and every update is written to the audit log.
+- Exports neutralise spreadsheet formulas, because imported text is untrusted.
 
 ## Transport and headers
 
@@ -93,5 +120,7 @@ echo input values.
 ## Known gaps (tracked)
 
 - No rate limiting yet. Add it at the edge (platform or reverse proxy) or in the API before public launch.
+- Route handlers in `apps/web/src/app/api` check `Origin` on mutations themselves; Server Actions rely on the
+  framework's equivalent check.
 - `npm audit` reports moderate advisories in development-only tooling (ESLint/openapi-typescript →
   `minimatch`). They are not part of the production bundle.

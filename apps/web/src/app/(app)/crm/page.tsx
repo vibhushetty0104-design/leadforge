@@ -11,7 +11,7 @@ export default function CrmPage() {
   return (
     <RoadmapSection
       title="CRM"
-      phase="Phase 3"
+      phase="Phase 4"
       icon={UsersRound}
       description="Track conversations, follow-ups and deal stages for every prospect."
       planned={[

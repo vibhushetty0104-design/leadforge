@@ -2,6 +2,7 @@ import {
   Building2,
   LayoutDashboard,
   type LucideIcon,
+  Radar,
   ScanSearch,
   Send,
   Settings,
@@ -18,13 +19,15 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/discovery", label: "Discovery", icon: Radar },
   { href: "/leads", label: "Leads", icon: Building2 },
-  { href: "/audits", label: "Audits", icon: ScanSearch, phase: "Phase 2" },
-  { href: "/campaigns", label: "Campaigns", icon: Send, phase: "Phase 3" },
-  { href: "/crm", label: "CRM", icon: UsersRound, phase: "Phase 3" },
+  { href: "/audits", label: "Audits", icon: ScanSearch, phase: "Phase 3" },
+  { href: "/campaigns", label: "Campaigns", icon: Send, phase: "Phase 4" },
+  { href: "/crm", label: "CRM", icon: UsersRound, phase: "Phase 4" },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export const SEGMENT_LABELS: Record<string, string> = Object.fromEntries(
-  NAV_ITEMS.map((item) => [item.href.slice(1), item.label]),
-);
+export const SEGMENT_LABELS: Record<string, string> = {
+  ...Object.fromEntries(NAV_ITEMS.map((item) => [item.href.slice(1), item.label])),
+  imports: "Imports",
+};

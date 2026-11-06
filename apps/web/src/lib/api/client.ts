@@ -113,3 +113,24 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     error: { status: response.status, code: "http_error", message: `API returned ${response.status}.` },
   };
 }
+
+/** Forward a request whose body or response is a stream (CSV upload and export). */
+export async function apiForward(
+  path: string,
+  init: { method: "POST"; token: string; organizationId: string; contentType: string; body: BodyInit | null },
+): Promise<Response> {
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) throw new Error("API_BASE_URL is not configured.");
+  return fetch(`${baseUrl}${path}`, {
+    method: init.method,
+    headers: {
+      Authorization: `Bearer ${init.token}`,
+      "X-Organization-Id": init.organizationId,
+      "Content-Type": init.contentType,
+    },
+    body: init.body,
+    cache: "no-store",
+    // Required by fetch when the body is a stream.
+    ...(init.body instanceof ReadableStream ? { duplex: "half" } : {}),
+  } as RequestInit);
+}

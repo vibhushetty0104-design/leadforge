@@ -46,7 +46,7 @@ export async function RoadmapSection({
           className="lg:col-span-3"
           icon={icon}
           title={`${title} workflow is not available yet`}
-          description={`The data model is in place and the counts above are live. The interactive ${title.toLowerCase()} workflow ships in ${phase}.`}
+          description={`The data model is in place and the counts above are live. The interactive workflow ships in ${phase}.`}
         />
         <Card className="lg:col-span-2">
           <CardHeader>

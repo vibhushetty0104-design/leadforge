@@ -81,7 +81,11 @@ def str_enum(enum_cls: type[StrEnum], name: str) -> Enum:
 
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
-    type_annotation_map: ClassVar[dict[Any, Any]] = {dict[str, Any]: JSONType}
+    type_annotation_map: ClassVar[dict[Any, Any]] = {
+        dict[str, Any]: JSONType,
+        list[str]: JSONType,
+        list[dict[str, Any]]: JSONType,
+    }
 
 
 class UUIDPrimaryKeyMixin:

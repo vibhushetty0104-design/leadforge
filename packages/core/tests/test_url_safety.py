@@ -89,3 +89,45 @@ def test_resolution_returns_vetted_public_addresses(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
     assert resolve_public_addresses("example.com") == ["93.184.215.14"]
+
+
+@pytest.mark.parametrize(
+    ("raw", "url"),
+    [
+        ("https://example.com:443/", "https://example.com/"),
+        ("http://example.com:80/", "http://example.com/"),
+        ("https://example.com/about/", "https://example.com/about"),
+        ("https://example.com///", "https://example.com/"),
+        ("HTTPS://EXAMPLE.com", "https://example.com/"),
+        ("example.com.", "https://example.com/"),
+    ],
+)
+def test_equivalent_urls_normalize_to_one_form(raw: str, url: str) -> None:
+    assert normalize_public_url(raw).url == url
+
+
+def test_www_and_bare_domains_share_a_domain() -> None:
+    assert normalize_public_url("www.example.com").domain == "example.com"
+    assert normalize_public_url("example.com").domain == "example.com"
+    assert normalize_public_url("shop.example.com").domain == "shop.example.com"
+
+
+def test_the_submitted_url_is_preserved() -> None:
+    assert normalize_public_url("  WWW.Example.com/Path/ ").original == "WWW.Example.com/Path/"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "http://[fe80::1]/",
+        "http://[::]/",
+        "http://[2002:7f00:1::]/",  # 6to4 wrapping 127.0.0.1
+        "data:text/html,hi",
+        "gopher://example.com/",
+        "//example.com:99999/",
+        "http://exam_ple.com/",
+    ],
+)
+def test_more_unsafe_forms_are_rejected(raw: str) -> None:
+    with pytest.raises(UnsafeURLError):
+        normalize_public_url(raw)

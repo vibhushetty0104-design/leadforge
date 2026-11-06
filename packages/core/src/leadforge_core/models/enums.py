@@ -55,6 +55,8 @@ class JobType(StrEnum):
     WEBSITE_AUDIT = "website_audit"
     LEAD_SCORING = "lead_scoring"
     IMPORT = "import"
+    URL_VALIDATION = "url_validation"
+    WEBSITE_INSPECTION = "website_inspection"
 
 
 class JobStatus(StrEnum):
@@ -97,3 +99,42 @@ class ActivityType(StrEnum):
     MEETING = "meeting"
     STATUS_CHANGE = "status_change"
     FOLLOW_UP = "follow_up"
+
+
+class WebsiteStatus(StrEnum):
+    UNKNOWN = "unknown"
+    REACHABLE = "reachable"
+    UNREACHABLE = "unreachable"
+    # Refused by our safety rules, robots.txt, or the site's own access controls.
+    BLOCKED = "blocked"
+
+
+class ImportStatus(StrEnum):
+    DRAFT = "draft"  # uploaded; awaiting column mapping and confirmation
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ImportRowOutcome(StrEnum):
+    PENDING = "pending"
+    INVALID = "invalid"
+    CREATED = "created"
+    UPDATED = "updated"
+    SKIPPED_DUPLICATE = "skipped_duplicate"
+    # A possible match nobody decided on: nothing was written for this row.
+    NEEDS_REVIEW = "needs_review"
+
+
+class DuplicateAction(StrEnum):
+    SKIP = "skip"
+    UPDATE = "update"  # fills blank fields on the existing record, never overwrites
+    CREATE = "create"  # keep as a separate business
+
+
+class InspectionStatus(StrEnum):
+    SUCCESS = "success"
+    FAILED = "failed"
+    BLOCKED = "blocked"

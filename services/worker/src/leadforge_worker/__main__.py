@@ -14,7 +14,7 @@ def main() -> None:
     configure_logging(settings.log_level, json_output=settings.log_json)
     engine = engine_from_settings(settings)
     try:
-        worker = Worker(build_session_factory(engine), default_registry(), settings)
+        worker = Worker(build_session_factory(engine), default_registry(settings), settings)
         worker.install_signal_handlers()
         worker.run_forever()
     finally:

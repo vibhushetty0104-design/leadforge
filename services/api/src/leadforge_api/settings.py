@@ -28,6 +28,11 @@ class ApiSettings(CoreSettings):
     supabase_jwt_secret: SecretStr | None = None
     supabase_jwt_audience: str = "authenticated"
 
+    # CSV import limits. The default upload size stays under Vercel's request body
+    # limit, because uploads pass through the web app.
+    import_max_upload_bytes: int = Field(default=4_000_000, ge=1024, le=100_000_000)
+    import_max_rows: int = Field(default=5_000, ge=1, le=100_000)
+
     # Interactive docs default to on outside production.
     api_docs_enabled: bool | None = None
 
