@@ -17,6 +17,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S105", "S106", "S311"]
 "database/migrations/**" = ["E501"]
+"scripts/check_migrations.py" = ["S608"]  # DDL uses a generated, hex-only name
 
 [tool.ruff.lint.isort]
 known-first-party = ["leadforge_core", "leadforge_api", "leadforge_worker"]

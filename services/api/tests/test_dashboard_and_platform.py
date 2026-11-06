@@ -146,3 +146,15 @@ def test_docs_disabled_in_production(settings) -> None:  # type: ignore[no-untyp
     app_client = TestClient(create_app(prod))
     assert app_client.get("/docs").status_code == 404
     assert app_client.get("/openapi.json").status_code == 404
+
+
+def test_startup_never_creates_tables(settings) -> None:  # type: ignore[no-untyped-def]
+    from sqlalchemy import inspect
+
+    from leadforge_api.main import create_app
+    from leadforge_core.db import build_engine
+
+    empty = build_engine("sqlite+pysqlite:///:memory:")
+    with TestClient(create_app(settings, engine=empty)) as client:  # runs the lifespan
+        assert client.get("/health").status_code == 200
+        assert inspect(empty).get_table_names() == []

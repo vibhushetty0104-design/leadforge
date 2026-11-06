@@ -73,13 +73,40 @@ jobs:
         run: pytest packages services -q
         env:
           TEST_DATABASE_URL: ${{ env.PG_URL }}
-      - name: Migrations apply cleanly and match the models
-        run: |
-          alembic -c database/alembic.ini upgrade head
-          alembic -c database/alembic.ini check
-          alembic -c database/alembic.ini downgrade base
+
+  migrations:
+    # Separate job and Postgres container: pytest builds its schema with create_all
+    # and leaves it behind, so it must never share a database with Alembic.
+    name: Migrations (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    services:
+      postgres:
+        image: postgres:16-alpine
         env:
-          DATABASE_URL: ${{ env.PG_URL }}
+          # Ephemeral CI-only database; not a secret.
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci_admin
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci_admin"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: "**/pyproject.toml"
+      - run: pip install -e packages/core
+      - name: Upgrade, check and downgrade in two fresh databases
+        run: python scripts/check_migrations.py --rounds 2
+        env:
+          MIGRATION_CHECK_ADMIN_URL: postgresql://ci:ci@localhost:5432/ci_admin
 
   contract:
     name: API contract is up to date
@@ -107,7 +134,7 @@ jobs:
   docker:
     name: Docker images build
     runs-on: ubuntu-latest
-    needs: [frontend, backend]
+    needs: [frontend, backend, migrations]
     steps:
       - uses: actions/checkout@v4
       - run: docker build -f services/api/Dockerfile -t leadforge-api:ci .

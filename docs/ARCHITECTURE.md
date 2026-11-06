@@ -42,6 +42,16 @@ worker. Without it, the SQLAlchemy models and the queue would be duplicated or i
 `api.gen.ts`. The frontend imports friendly aliases from `@leadforge/shared`. CI regenerates both and fails on
 any diff, so backend schema changes cannot silently break the frontend.
 
+### Alembic owns the schema
+
+Migrations are the only way a real schema is created or changed. Neither the API nor the worker creates tables
+at start-up, and tests enforce this. `Base.metadata.create_all` appears only in `leadforge_core.testing`, which
+refuses databases that are not named for tests.
+
+Test databases and migration targets are never shared: `create_all` leaves tables behind, and `alembic upgrade`
+would then fail with `DuplicateTable`. CI validates migrations in a dedicated job with its own Postgres
+container, using `scripts/check_migrations.py`.
+
 ### Enums as VARCHAR + CHECK
 
 Status and category columns use SQLAlchemy `Enum(native_enum=False, create_constraint=True)`. Values are

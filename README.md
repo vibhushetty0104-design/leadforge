@@ -173,6 +173,15 @@ npm run build
 python scripts/export_openapi.py && npm run generate:api
 ```
 
+`TEST_DATABASE_URL` must be a dedicated database whose name contains `test`. The suite drops and recreates
+its tables there and leaves them behind, so never run Alembic against it. To validate migrations, use:
+
+```bash
+python scripts/check_migrations.py --admin-url postgresql://user:pass@localhost:5432/postgres
+```
+
+This runs upgrade, check and downgrade in two brand-new throwaway databases and drops only those.
+
 The Postgres-only tests cover concurrent job claiming with `SKIP LOCKED`, migration-versus-model drift,
 RLS coverage and `updated_at` triggers.
 
