@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # LEADFORGE
 
 **Prospect intelligence and website auditing for freelance developers and digital agencies.**
@@ -198,3 +199,7 @@ Report vulnerabilities privately as described in [docs/SECURITY.md](docs/SECURIT
 ## License
 
 [MIT](LICENSE)
+=======
+# leadforge
+something that will make finding clients easier.. Where Every Lead Forges a New Opportunity.
+>>>>>>> origin/main
